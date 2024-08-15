@@ -47,6 +47,7 @@ def start_script():
     tolerance = 30
     
     min_area = 9
+    bomb_check_area = 5  # 5x5 pixels check around the flower center
     
     start_time = time.time()
     last_positions = []
@@ -85,17 +86,18 @@ def start_script():
                 # Avoid clicking on positions near previously clicked locations
                 if not any(abs(center_x - pos[0]) < 5 and abs(center_y - pos[1]) < 5 for pos in last_positions):
                     
-                    # Secondary check for bomb-specific RGB colors within the detected flower area
-                    flower_region = rgb_image[y:y+h, x:x+w]
-                    
+                    # Check a 5x5 area around the flower's center for bomb colors
                     bomb_detected = False
+                    small_area = rgb_image[max(0, y+h//2-bomb_check_area):min(rgb_image.shape[0], y+h//2+bomb_check_area),
+                                           max(0, x+w//2-bomb_check_area):min(rgb_image.shape[1], x+w//2+bomb_check_area)]
+                    
                     for bomb_color in bomb_colors:
                         lower_bomb = np.array([max(0, c - tolerance) for c in bomb_color])
                         upper_bomb = np.array([min(255, c + tolerance) for c in bomb_color])
                         
-                        bomb_mask = cv2.inRange(flower_region, lower_bomb, upper_bomb)
+                        bomb_mask = cv2.inRange(small_area, lower_bomb, upper_bomb)
                         
-                        # If any bomb-like color is detected, mark the region as a bomb and skip clicking
+                        # If any bomb-like color is detected in the 5x5 area, skip clicking
                         if cv2.countNonZero(bomb_mask) > 0:
                             bomb_detected = True
                             break
@@ -109,7 +111,7 @@ def start_script():
                 pyautogui.click(pos[0], pos[1])
                 last_positions.append(pos)
         
-        time.sleep(0.000005)
+        time.sleep(0.0005)
     
     messagebox.showinfo("Script Finished", "The script has completed its run.")
 
